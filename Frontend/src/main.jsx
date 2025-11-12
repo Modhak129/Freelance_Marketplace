@@ -9,9 +9,7 @@ import { AuthProvider } from "./context/AuthContext"; // adjust path
 ReactDOM.createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
         <App />
-      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );

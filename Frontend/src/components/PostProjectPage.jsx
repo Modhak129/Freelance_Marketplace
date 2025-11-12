@@ -19,7 +19,7 @@ export default function PostProjectPage() {
       setSuccess('Project posted successfully! Redirecting...');
       setTimeout(() => navigate(`/project/${res.data.id}`), 1200);
     } catch (err) {
-      setError('Failed to post project. Please try again.');
+      setError(err.response?.data?.msg || 'Failed to post project. Please try again.');
     }
   };
 

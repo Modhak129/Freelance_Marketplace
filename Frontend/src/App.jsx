@@ -9,7 +9,7 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import ProjectListPage from './components/ProjectListPage';
 import ProjectDetailPage from './components/ProjectDetailsPage';
-import PostProjectPage from './components/PostProject';
+import PostProjectPage from './components/PostProjectPage';
 import UserProfilePage from './components/UserProfilePage';
 
 import { ProtectedRoute } from './context/AuthContext';

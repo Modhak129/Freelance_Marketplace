@@ -3,7 +3,10 @@ import axios from "axios";
 import { Navigate, Outlet } from "react-router-dom";
 
 // axios base
-axios.defaults.baseURL = "http://127.0.0.1:5000/api";
+// Configure axios base URL. 
+// It's recommended to use an environment variable for this.
+// Example: axios.defaults.baseURL = process.env.REACT_APP_API_URL;
+axios.defaults.baseURL = "http://127.0.0.1:5000/api"; // Replace with your API's base URL
 
 // Context
 const AuthContext = createContext(undefined); // use undefined so we can detect missing provider
@@ -35,7 +38,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   const login = async (email, password) => {
     try {
@@ -43,12 +46,13 @@ export function AuthProvider({ children }) {
       // adjust field names if your backend uses different keys
       const { access_token, user: userFromResponse } = response.data;
       if (!access_token) throw new Error("No access token in response");
-      // set token first (this will also trigger effect to verify/fetch profile)
+      
+      // Set user and token immediately from login response
+      setUser(userFromResponse);
       setToken(access_token);
       localStorage.setItem("token", access_token);
-      // optionally set user immediately from login response to avoid refetch flicker
-      if (userFromResponse) setUser(userFromResponse);
       axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+      
       return true;
     } catch (err) {
       console.error("Login failed", err.response?.data || err.message);

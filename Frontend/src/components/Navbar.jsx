@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
 
+
+
 export default function NavBar() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ export default function NavBar() {
   };
 
   return (
+
     <nav className="bg-white shadow-md">
       <div className="container mx-auto py-4 px-4 md:px-0 flex justify-between items-center">
         <Link to="/" className="text-2xl font-bold text-indigo-600">
@@ -51,5 +54,6 @@ export default function NavBar() {
         </div>
       </div>
     </nav>
+
   );
 }
