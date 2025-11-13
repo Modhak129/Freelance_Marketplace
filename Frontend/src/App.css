@@ -1,1 +1,65 @@
 @import "tailwindcss";
+
+/*
+  Based on TailwindCSS recommendations,
+  consider using classes instead of the `@apply` directive
+  @see https://tailwindcss.com/docs/reusing-styles#avoiding-premature-abstraction
+*/
+/* ===== Background Gradient ===== */
+body {
+  @apply min-h-screen flex justify-center items-center m-0 p-0;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #c084fc, #818cf8, #60a5fa);
+}
+
+/* ===== Login Card ===== */
+.login-card {
+  @apply w-[380px] backdrop-blur-[18px] shadow-[0_12px_40px_rgba(0,0,0,0.25)] box-border p-10 rounded-[25px];
+  background: rgba(255, 255, 255, 0.25); /* Added for better padding control */
+}
+
+/* ===== Title ===== */
+.login-title {
+  @apply text-center text-[white] text-[32px] font-extrabold mt-0 mb-5; /* Added for spacing */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* This div groups the label and input */
+.form-group {
+  @apply mb-[15px];
+}
+
+/* ===== Labels ===== */
+.login-label {
+  @apply text-[white] text-[15px] font-semibold block mb-1.5;
+}
+
+/* ===== Inputs ===== */
+.login-input {
+  @apply w-full border text-[15px] text-[#333] transition-[0.2s] box-border my-2.5 px-4 py-3 rounded-[14px] border-solid border-[rgba(255,255,255,0.6)] focus:border-violet-400 focus:shadow-[0_0_8px_rgba(167,139,250,0.7)];
+  background: rgba(255, 255, 255, 0.6);
+  outline: none; /* Ensures padding doesn't break width */ /* Adds space above the input */ /* Adds space below the input */
+}
+
+/* ===== Button ===== */
+.login-btn {
+  @apply w-full text-[white] text-lg font-[bold] cursor-pointer transition-[0.25s] mt-2.5 p-3.5 rounded-[14px] border-[none] hover:scale-[1.02] active:scale-[0.97];
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+}
+.login-btn:hover {
+  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+}
+
+/* ===== Error Message ===== */
+.error-msg {
+  @apply text-center text-[white] font-semibold hidden mb-[15px] p-2.5 rounded-xl;
+  background: rgba(255, 100, 100, 0.8); /* Hide it by default */
+}
+
+/* ===== Signup text ===== */
+.signup-text {
+  @apply text-[rgba(255,255,255,0.85)] text-center mt-[18px];
+}
+.signup-text span {
+  @apply text-[white] font-[bold] underline cursor-pointer;
+}

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import "../App.css";
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,19 +21,19 @@ export default function LoginPage() {
 
   return (
     <div className="flex justify-center items-center mt-16 px-4">
-      <div className="card w-full max-w-md p-8">
-        <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+      <div className="login-card">
+        <h2 className="login-title">Login</h2>
+        {error && <p className="error-msg">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">Email</label>
-            <input type="email" className="form-input w-full" value={email} onChange={e => setEmail(e.target.value)} required />
+            <label className="login-label">Email</label>
+            <input type="email" className="login-input" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm mb-1">Password</label>
-            <input type="password" className="form-input w-full" value={password} onChange={e => setPassword(e.target.value)} required />
+            <label className="login-label">Password</label>
+            <input type="password" className="login-input" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
-          <button type="submit" className="btn btn-primary w-full px-4 py-2 bg-indigo-600 text-white rounded">Login</button>
+          <button type="submit" className="login-btn">Login</button>
         </form>
       </div>
     </div>
