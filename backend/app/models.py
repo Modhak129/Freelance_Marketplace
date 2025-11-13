@@ -1,7 +1,6 @@
 from datetime import datetime
 from app import db  # Assumes 'db' is created in 'app.py' or 'app/__init__.py'
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.ext.hybrid import hybrid_property
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -10,40 +9,59 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     is_freelancer = db.Column(db.Boolean, default=False, nullable=False)
     bio = db.Column(db.Text, nullable=True)
-    skills = db.Column(db.Text, nullable=True)  # "Python,React,Graphic Design"
-    
-    # --- NEW FIELDS FOR RANKING ---
-    # These would ideally be calculated and updated periodically by a background task
-    avg_rating = db.Column(db.Float, default=0.0)
-    completion_rate = db.Column(db.Float, default=0.0) # e.g., 0.9 = 90%
-    on_time_rate = db.Column(db.Float, default=0.0)    # e.g., 0.95 = 95%
-    portfolio_score = db.Column(db.Float, default=0.0) # A score from 0.0 to 1.0
-    # ---------------------------------
+    skills = db.Column(db.Text, nullable=True)
 
-    # Relationships
-    projects_as_client = db.relationship('Project', foreign_keys='Project.client_id', back_populates='client', lazy='dynamic')
-    projects_as_freelancer = db.relationship('Project', foreign_keys='Project.freelancer_id', back_populates='freelancer', lazy='dynamic')
-    bids = db.relationship('Bid', back_populates='freelancer', lazy='dynamic')
-    reviews_given = db.relationship('Review', foreign_keys='Review.reviewer_id', back_populates='reviewer', lazy='dynamic')
-    reviews_received = db.relationship('Review', foreign_keys='Review.reviewee_id', back_populates='reviewee', lazy='dynamic')
+    avg_rating = db.Column(db.Float, default=0.0)
+    completion_rate = db.Column(db.Float, default=0.0)
+    on_time_rate = db.Column(db.Float, default=0.0)
+    portfolio_score = db.Column(db.Float, default=0.0)
+
+    projects_accepted = db.Column(db.Integer, default=0, nullable=False)
+    projects_completed = db.Column(db.Integer, default=0, nullable=False)
+
+    projects_as_client = db.relationship(
+        'Project',
+        foreign_keys='Project.client_id',
+        back_populates='client',
+        lazy='dynamic'
+    )
+    projects_as_freelancer = db.relationship(
+        'Project',
+        foreign_keys='Project.freelancer_id',
+        back_populates='freelancer',
+        lazy='dynamic'
+    )
+
+    bids = db.relationship(
+        'Bid',
+        back_populates='freelancer',
+        lazy='dynamic',
+        cascade="all, delete-orphan",
+        foreign_keys='Bid.freelancer_id'
+    )
+
+    reviews_given = db.relationship(
+        'Review',
+        foreign_keys='Review.reviewer_id',
+        back_populates='reviewer',
+        lazy='dynamic'
+    )
+    reviews_received = db.relationship(
+        'Review',
+        foreign_keys='Review.reviewee_id',
+        back_populates='reviewee',
+        lazy='dynamic'
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-    
-    # Example: You could use a hybrid_property to calculate avg_rating on the fly,
-    # but this can be slow. It's often better to store it as a column.
-    # @hybrid_property
-    # def avg_rating(self):
-    #     reviews = self.reviews_received.all()
-    #     if not reviews:
-    #         return 0.0
-    #     return sum(r.rating for r in reviews) / len(reviews)
 
     def __repr__(self):
         return f'<User {self.username}>'
+
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -52,23 +70,56 @@ class Project(db.Model):
     budget = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), default='open', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # --- NEW FIELD FOR RANKING ---
-    required_skills = db.Column(db.Text, nullable=True) # "Python,Flask,Stripe"
-    # -----------------------------
 
-    # ForeignKeys
+    required_skills = db.Column(db.Text, nullable=True)
+
     client_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     freelancer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
-    # Relationships
-    client = db.relationship('User', foreign_keys=[client_id], back_populates='projects_as_client')
-    freelancer = db.relationship('User', foreign_keys=[freelancer_id], back_populates='projects_as_freelancer')
-    bids = db.relationship('Bid', back_populates='project', lazy='dynamic', cascade="all, delete-orphan")
-    reviews = db.relationship('Review', back_populates='project', lazy='dynamic', cascade="all, delete-orphan")
+    # store which bid was accepted (nullable FK to bid.id)
+    # This is in your Project model
+    accepted_bid_id = db.Column(db.Integer, db.ForeignKey('bid.id', use_alter=True), nullable=True)
+
+    # relationships
+    client = db.relationship(
+        'User',
+        foreign_keys=[client_id],
+        back_populates='projects_as_client'
+    )
+
+    freelancer = db.relationship(
+        'User',
+        foreign_keys=[freelancer_id],
+        back_populates='projects_as_freelancer'
+    )
+
+    # explicitly indicate Bid.project_id is the FK used for this relationship
+    bids = db.relationship(
+        'Bid',
+        back_populates='project',
+        lazy='dynamic',
+        cascade="all, delete-orphan",
+        foreign_keys='Bid.project_id'
+    )
+
+    reviews = db.relationship(
+        'Review',
+        back_populates='project',
+        lazy='dynamic',
+        cascade="all, delete-orphan"
+    )
+
+    # relationship pointing to the accepted bid (uses Project.accepted_bid_id)
+    accepted_bid = db.relationship(
+        'Bid',
+        foreign_keys=[accepted_bid_id],
+        uselist=False,
+        post_update=True  # helpful when circular FK updates happen
+    )
 
     def __repr__(self):
         return f'<Project {self.title}>'
+
 
 class Bid(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,33 +127,38 @@ class Bid(db.Model):
     proposal = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # --- NEW FIELD FOR RANKING ---
     proposed_timeline_days = db.Column(db.Integer, nullable=True)
-    # -----------------------------
 
-    # ForeignKeys
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     freelancer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # Relationships
-    project = db.relationship('Project', back_populates='bids')
-    freelancer = db.relationship('User', back_populates='bids')
+    # explicitly indicate this relationship uses project_id as foreign key
+    project = db.relationship(
+        'Project',
+        back_populates='bids',
+        foreign_keys=[project_id]
+    )
+
+    freelancer = db.relationship(
+        'User',
+        back_populates='bids',
+        foreign_keys=[freelancer_id]
+    )
 
     def __repr__(self):
         return f'<Bid {self.amount} on Project {self.project_id}>'
 
+
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    rating = db.Column(db.Integer, nullable=False)  # 1 to 5
+    rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # ForeignKeys
+
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reviewee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # Relationships
     project = db.relationship('Project', back_populates='reviews')
     reviewer = db.relationship('User', foreign_keys=[reviewer_id], back_populates='reviews_given')
     reviewee = db.relationship('User', foreign_keys=[reviewee_id], back_populates='reviews_received')
