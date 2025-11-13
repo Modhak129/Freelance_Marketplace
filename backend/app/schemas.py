@@ -4,10 +4,24 @@ from marshmallow import fields
 
 # --- Nested Schemas ---
 # Used to show minimal user info inside other objects
+
+
 class UserPublicSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        fields = ('id', 'username', 'is_freelancer', 'ranking_score')
+        # Remove 'ranking_score' and add the new, correct fields
+        fields = ("id", "username", "email", "is_freelancer", "bio", "skills", 
+                  "avg_rating", "completion_rate", "on_time_rate", "portfolio_score")
+
+class ProjectSchema(ma.SQLAlchemyAutoSchema):
+    client = ma.Nested(UserPublicSchema)
+    freelancer = ma.Nested(UserPublicSchema)
+
+    class Meta:
+        model = Project
+        include_fk = True
+        fields = ("id", "title", "description", "budget", "status", 
+                  "created_at", "required_skills", "client", "freelancer")
 
 # --- Main Schemas ---
 

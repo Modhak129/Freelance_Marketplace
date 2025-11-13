@@ -5,6 +5,8 @@ from app.schemas import UserSchema, ProjectSchema, BidSchema, ReviewSchema
 from werkzeug.security import generate_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from sqlalchemy import or_
+from app.ranking_logic import calculate_ranked_bids # <-- Import the logic
+from flask import request, jsonify
 
 # Initialize Schemas
 user_schema = UserSchema()
@@ -105,16 +107,29 @@ def my_profile():  # <-- Renamed the function
 
 @api_bp.route('/projects', methods=['GET'])
 def get_projects():
-    skill_query = request.args.get('skill')
+    try:
+        projects = Project.query.all()
+        query = Project.query.filter_by(status='open')
+        # This is the line that was causing the *previous* crash.
+        # It will work now if your schemas are correct.
+        projects = query.order_by(Project.created_at.desc()).all()
+        return projects_schema.dump(projects), 200
+
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in /api/projects: {e}") 
+        return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
+# def get_projects():
+#     skill_query = request.args.get('skill')
     
-    query = Project.query.filter_by(status='open')
+#     query = Project.query.filter_by(status='open')
     
-    if skill_query:
-        # This is a simple 'like' search. A real app might use a tags table.
-        query = query.filter(Project.description.like(f"%{skill_query}%"))
+#     if skill_query:
+#         # This is a simple 'like' search. A real app might use a tags table.
+#         query = query.filter(Project.description.like(f"%{skill_query}%"))
         
-    projects = query.order_by(Project.created_at.desc()).all()
-    return projects_schema.dump(projects), 200
+#     projects = query.order_by(Project.created_at.desc()).all()
+#     return projects_schema.dump(projects), 200
 
 @api_bp.route('/projects', methods=['POST'])
 @jwt_required()
@@ -255,3 +270,44 @@ def post_review(id):
     update_user_ranking(reviewee_id)
     
     return review_schema.dump(new_review), 201
+
+
+
+@api_bp.route('/rank_bids', methods=['POST'])
+def rank_bids():
+    """
+    Ranks bids using the modular logic.
+    Example input JSON:
+    {
+        "project_id": 1,
+        "priority": "price"  # or "time", "ratings", "balanced"
+    }
+    """
+    data = request.get_json()
+    project_id = data.get('project_id')
+    priority = data.get('priority', 'balanced').lower()
+
+    if not project_id:
+        return jsonify({"error": "project_id is required"}), 400
+
+    # --- Data Fetching ---
+    project = Project.query.get(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    bids = Bid.query.filter_by(project_id=project_id).all()
+    if not bids:
+        return jsonify({"ranked_bids": [], "message": "No bids found for this project"}), 200
+
+    # --- Call the Logic Function ---
+    ranking_data = calculate_ranked_bids(project, bids, priority)
+
+    if "error" in ranking_data:
+        return jsonify(ranking_data), 404
+
+    return jsonify({
+        "project_title": project.title,
+        "priority_used": priority,
+        "weights_applied": ranking_data["weights_applied"],
+        "ranked_bids": ranking_data["ranked_bids"]
+    })

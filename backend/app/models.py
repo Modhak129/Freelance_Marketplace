@@ -1,6 +1,7 @@
 from datetime import datetime
-from app import db
+from app import db  # Assumes 'db' is created in 'app.py' or 'app/__init__.py'
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.ext.hybrid import hybrid_property
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -9,19 +10,21 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     is_freelancer = db.Column(db.Boolean, default=False, nullable=False)
     bio = db.Column(db.Text, nullable=True)
-    skills = db.Column(db.Text, nullable=True)  # e.g., "Python,React,Graphic Design"
-    ranking_score = db.Column(db.Float, default=0.0)
+    skills = db.Column(db.Text, nullable=True)  # "Python,React,Graphic Design"
+    
+    # --- NEW FIELDS FOR RANKING ---
+    # These would ideally be calculated and updated periodically by a background task
+    avg_rating = db.Column(db.Float, default=0.0)
+    completion_rate = db.Column(db.Float, default=0.0) # e.g., 0.9 = 90%
+    on_time_rate = db.Column(db.Float, default=0.0)    # e.g., 0.95 = 95%
+    portfolio_score = db.Column(db.Float, default=0.0) # A score from 0.0 to 1.0
+    # ---------------------------------
 
     # Relationships
-    # Projects where this user is the client
     projects_as_client = db.relationship('Project', foreign_keys='Project.client_id', back_populates='client', lazy='dynamic')
-    # Projects where this user is the freelancer
     projects_as_freelancer = db.relationship('Project', foreign_keys='Project.freelancer_id', back_populates='freelancer', lazy='dynamic')
-    # Bids made by this user (must be a freelancer)
     bids = db.relationship('Bid', back_populates='freelancer', lazy='dynamic')
-    # Reviews written by this user
     reviews_given = db.relationship('Review', foreign_keys='Review.reviewer_id', back_populates='reviewer', lazy='dynamic')
-    # Reviews received by this user
     reviews_received = db.relationship('Review', foreign_keys='Review.reviewee_id', back_populates='reviewee', lazy='dynamic')
 
     def set_password(self, password):
@@ -29,6 +32,15 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    # Example: You could use a hybrid_property to calculate avg_rating on the fly,
+    # but this can be slow. It's often better to store it as a column.
+    # @hybrid_property
+    # def avg_rating(self):
+    #     reviews = self.reviews_received.all()
+    #     if not reviews:
+    #         return 0.0
+    #     return sum(r.rating for r in reviews) / len(reviews)
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -38,9 +50,13 @@ class Project(db.Model):
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=False)
     budget = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), default='open', nullable=False)  # open, in_progress, completed, cancelled
+    status = db.Column(db.String(20), default='open', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # --- NEW FIELD FOR RANKING ---
+    required_skills = db.Column(db.Text, nullable=True) # "Python,Flask,Stripe"
+    # -----------------------------
+
     # ForeignKeys
     client_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     freelancer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -59,6 +75,10 @@ class Bid(db.Model):
     amount = db.Column(db.Float, nullable=False)
     proposal = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # --- NEW FIELD FOR RANKING ---
+    proposed_timeline_days = db.Column(db.Integer, nullable=True)
+    # -----------------------------
 
     # ForeignKeys
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
