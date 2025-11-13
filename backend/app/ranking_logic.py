@@ -158,6 +158,10 @@ def calculate_ranked_bids(project, bids, priority='balanced'):
             "freelancer_name": b_data["freelancer"].username,
             "bid_amount": b_data["bid"].amount,
             "timeline_days": b_data["bid"].proposed_timeline_days,
+            
+            "proposal": b_data["bid"].proposal, 
+            # --- [END OF ADDITION] ---
+
             "score": round(score, 4),
             "debug_features": b_data["features"],
             "debug_normalized": nf
@@ -165,6 +169,8 @@ def calculate_ranked_bids(project, bids, priority='balanced'):
 
     # --- Step 5: Sort by descending score ---
     results.sort(key=lambda x: x["score"], reverse=True)
+
+    
     
     return {
         "weights_applied": weights,
